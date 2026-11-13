@@ -19,6 +19,10 @@
 
     <properties>
         <java.version>21</java.version>
+        <!-- Permite que Mockito (Byte Buddy) funcione si los tests se ejecutan con un JDK
+             mas nuevo que el que soporta oficialmente (por ejemplo Java 25 en desarrollo).
+             En Docker se compila con Java 21 y esta opcion no tiene efecto. -->
+        <argLine>-Dnet.bytebuddy.experimental=true</argLine>
     </properties>
 
     <dependencies>

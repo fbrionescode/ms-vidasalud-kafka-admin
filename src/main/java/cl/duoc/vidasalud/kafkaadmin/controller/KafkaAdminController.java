@@ -64,6 +64,14 @@ public class KafkaAdminController {
         return ResponseEntity.ok(kafkaAdminService.actualizarConfigTopico(nombre, request));
     }
 
+    /** Quita una configuracion del topico para que vuelva al valor por defecto del broker. */
+    @DeleteMapping("/topicos/{nombre}/config/{clave}")
+    public ResponseEntity<TopicoDetalleDto> eliminarConfigTopico(
+            @PathVariable String nombre,
+            @PathVariable String clave) throws ExecutionException, InterruptedException {
+        return ResponseEntity.ok(kafkaAdminService.eliminarConfigTopico(nombre, clave));
+    }
+
     @PostMapping("/topicos/{nombre}/particiones")
     public ResponseEntity<TopicoDetalleDto> aumentarParticiones(
             @PathVariable String nombre,
@@ -92,4 +100,4 @@ public class KafkaAdminController {
             throws ExecutionException, InterruptedException {
         return ResponseEntity.ok(kafkaAdminService.obtenerDetalleGrupo(groupId));
     }
-}
+}

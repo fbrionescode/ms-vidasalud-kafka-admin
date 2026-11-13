@@ -187,6 +187,39 @@ public class KafkaAdminService {
         return obtenerDetalleTopico(nombre);
     }
 
+    /**
+     * Elimina una configuracion propia del topico: vuelve al valor por defecto del broker.
+     *
+     * Solo para claves de la lista blanca y nunca sobre los topicos protegidos del sistema,
+     * cuyas configuraciones (por ejemplo cleanup.policy=compact en boxes) son parte del diseño.
+     */
+    public TopicoDetalleDto eliminarConfigTopico(String nombre, String clave)
+            throws ExecutionException, InterruptedException {
+        if (!CONFIGS_PERMITIDAS.contains(clave)) {
+            throw new ConfigNoPermitidaException(
+                    clave,
+                    "La configuracion '" + clave + "' no esta en la lista blanca permitida: " + CONFIGS_PERMITIDAS
+            );
+        }
+        if (properties.getTopicosProtegidos().contains(nombre)) {
+            throw new TopicoProtegidoException(nombre,
+                    "No se permite eliminar configuraciones del topico protegido del sistema: " + nombre);
+        }
+
+        // Verificar que el topico exista antes de alterar su configuracion
+        adminClient.describeTopics(List.of(nombre)).allTopicNames().get();
+
+        ConfigResource resource = new ConfigResource(ConfigResource.Type.TOPIC, nombre);
+        Collection<AlterConfigOp> operaciones = List.of(
+                new AlterConfigOp(new ConfigEntry(clave, null), AlterConfigOp.OpType.DELETE));
+
+        adminClient.incrementalAlterConfigs(Map.of(resource, operaciones)).all().get();
+        log.info("kafka-admin | configuracion eliminada (vuelve al valor por defecto) | topico={} | clave={}",
+                nombre, clave);
+
+        return obtenerDetalleTopico(nombre);
+    }
+
     public TopicoDetalleDto aumentarParticiones(String nombre, AumentarParticionesRequest request)
             throws ExecutionException, InterruptedException {
         adminClient.createPartitions(Map.of(nombre, NewPartitions.increaseTo(request.totalParticiones())))
@@ -307,4 +340,4 @@ public class KafkaAdminService {
             }
         }
     }
-}
+}

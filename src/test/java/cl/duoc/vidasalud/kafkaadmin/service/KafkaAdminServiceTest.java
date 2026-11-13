@@ -19,11 +19,13 @@ import cl.duoc.vidasalud.kafkaadmin.dto.CrearTopicoRequest;
 import cl.duoc.vidasalud.kafkaadmin.dto.TopicoDetalleDto;
 import cl.duoc.vidasalud.kafkaadmin.exception.ConfigNoPermitidaException;
 import cl.duoc.vidasalud.kafkaadmin.exception.TopicoProtegidoException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.AlterConfigOp;
 import org.apache.kafka.clients.admin.AlterConfigsResult;
 import org.apache.kafka.clients.admin.Config;
 import org.apache.kafka.clients.admin.ConfigEntry;
@@ -51,6 +53,7 @@ import org.apache.kafka.common.internals.KafkaFutureImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -163,6 +166,47 @@ class KafkaAdminServiceTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void eliminarConfigTopicoUsaOperacionDelete() throws Exception {
+        String nombre = "vidasalud.pruebas.eventos";
+
+        AlterConfigsResult alterResult = mock(AlterConfigsResult.class);
+        when(alterResult.all()).thenReturn(KafkaFuture.completedFuture(null));
+        when(adminClient.incrementalAlterConfigs(anyMap())).thenReturn(alterResult);
+
+        mockDescribeTopicoYConfig(nombre, "604800000");
+
+        TopicoDetalleDto resultado = service.eliminarConfigTopico(nombre, "retention.ms");
+
+        ArgumentCaptor<Map<ConfigResource, Collection<AlterConfigOp>>> captor = ArgumentCaptor.forClass(Map.class);
+        verify(adminClient).incrementalAlterConfigs(captor.capture());
+        ConfigResource resource = new ConfigResource(ConfigResource.Type.TOPIC, nombre);
+        AlterConfigOp operacion = captor.getValue().get(resource).iterator().next();
+        assertEquals(AlterConfigOp.OpType.DELETE, operacion.opType());
+        assertEquals("retention.ms", operacion.configEntry().name());
+        assertEquals(nombre, resultado.nombre());
+    }
+
+    @Test
+    void eliminarConfigDeTopicoProtegidoLanzaTopicoProtegidoException() {
+        assertThrows(
+                TopicoProtegidoException.class,
+                () -> service.eliminarConfigTopico("vidasalud.boxes.estado", "cleanup.policy")
+        );
+        verify(adminClient, never()).incrementalAlterConfigs(anyMap());
+    }
+
+    @Test
+    void eliminarConfigFueraDeListaBlancaLanzaConfigNoPermitidaException() {
+        ConfigNoPermitidaException ex = assertThrows(
+                ConfigNoPermitidaException.class,
+                () -> service.eliminarConfigTopico("vidasalud.pruebas.eventos", "unclean.leader.election.enable")
+        );
+        assertEquals("unclean.leader.election.enable", ex.getCampo());
+        verify(adminClient, never()).incrementalAlterConfigs(anyMap());
+    }
+
+    @Test
     void obtenerDetalleGrupoCalculaLagCorrectamente() throws Exception {
         String groupId = "vidasalud-analitica";
         TopicPartition tp0 = new TopicPartition("vidasalud.atenciones.eventos", 0);
@@ -242,4 +286,4 @@ class KafkaAdminServiceTest {
         when(describeConfigsResult.all()).thenReturn(KafkaFuture.completedFuture(Map.of(resource, config)));
         when(adminClient.describeConfigs(eq(List.of(resource)))).thenReturn(describeConfigsResult);
     }
-}
+}

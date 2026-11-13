@@ -17,7 +17,8 @@ Expone endpoints REST utilizando `AdminClient` de Kafka para inspeccionar el cl�
 | `GET` | `/api/kafka/topicos/{nombre}` | Detalle de particiones (líder, réplicas, ISR) y configuraciones |
 | `POST` | `/api/kafka/topicos` | Crea un tópico validando nombre, particiones, réplicas y lista blanca |
 | `PATCH` | `/api/kafka/topicos/{nombre}/config` | Modifica en caliente `retention.ms`, `cleanup.policy`, `min.insync.replicas`, `segment.ms` o `max.message.bytes` |
+| `DELETE` | `/api/kafka/topicos/{nombre}/config/{clave}` | Elimina una configuración del tópico (vuelve al valor por defecto del broker). Solo claves de la lista blanca; `403 Forbidden` en los tópicos protegidos |
 | `POST` | `/api/kafka/topicos/{nombre}/particiones` | Aumenta la cantidad de particiones de un tópico |
 | `DELETE` | `/api/kafka/topicos/{nombre}` | Elimina un tópico (retorna `403 Forbidden` si es uno de los 4 tópicos protegidos) |
 | `GET` | `/api/kafka/grupos` | Lista todos los consumer groups registrados en el clúster |
-| `GET` | `/api/kafka/grupos/{id}` | Detalle de miembros activos, particiones asignadas, offsets y **lag por partición** |
+| `GET` | `/api/kafka/grupos/{id}` | Detalle de miembros activos, particiones asignadas, offsets y **lag por partición** |
